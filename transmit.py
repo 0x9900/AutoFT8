@@ -1,3 +1,11 @@
+#
+# BSD 3-Clause License
+#
+# Copyright (c) 2021, Fred Cirera
+# All rights reserved.
+# See licence file for more information.
+#
+
 import logging
 import socket
 import threading

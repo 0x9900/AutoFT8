@@ -1,4 +1,9 @@
 #
+# BSD 3-Clause License
+#
+# Copyright (c) 2021, Fred Cirera
+# All rights reserved.
+#
 #
 import ctypes
 import struct

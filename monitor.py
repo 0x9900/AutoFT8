@@ -1,4 +1,10 @@
 #
+# BSD 3-Clause License
+#
+# Copyright (c) 2021, Fred Cirera
+# All rights reserved.
+#
+#
 import logging
 import select
 import socket

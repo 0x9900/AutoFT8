@@ -1,10 +1,16 @@
-# Header class for all WSJT received packets.  This class handles the header and
-# will create class for handling the packet depending on the packet type in
-# the header.
+#
+# BSD 3-Clause License
+#
+# Copyright (c) 2021, Fred Cirera
+# All rights reserved.
+#
+# For more information on the WSJT-X protocol look at the file
+# NetworkMessage.hpp located in the wsjt-x source directory
+# (src/wsjtx/Network/NetworkMessage.hpp)
 #
 # I use the camel case names to match the names in WSJT-X
 # pylint: disable=invalid-name
-
+#
 import struct
 import ctypes
 
