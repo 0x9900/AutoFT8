@@ -34,9 +34,6 @@ class SQStatus:
   7  shutdown       bool   (1)
   8  call           utf-8  (10)
   """
-  xmit = 0
-  max_tries = 4
-
   def __init__(self):
     self.max_tries = 4
 

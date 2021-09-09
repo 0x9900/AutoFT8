@@ -20,8 +20,10 @@ from pymongo import MongoClient
 import geo
 import monitor
 import sqstatus
-import transmit
 import wsjtx
+
+from transmit import Transmit
+
 
 RE_EXCHANGES = {
   "CQ": re.compile(r'^(?P<to>CQ) ((?P<extra>.*) )(?P<call>\w+)(|/\w+) (?P<grid>[A-Z]{2}[0-9]{2})'),
@@ -40,9 +42,6 @@ STATUS = sqstatus.SQStatus()
 def geoloc(lat, lon):
   return {"type": "Point", "coordinates" : [lat, lon]}
 
-def timestamp():
-  return int(datetime.utcnow().timestamp())
-
 def parse_packet(packet):
   """Save the traffic in the database"""
 
@@ -53,15 +52,15 @@ def parse_packet(packet):
 
   if not match:
     logging.error('Cannot parse message "%s"', packet.Message)
-    return packet
+    return None
 
   data = match.groupdict().copy()
-  data['timestamp'] = timestamp()
+  data['timestamp'] = Transmit.timestamp()
   data.update(packet.as_dict())
   exchange = type('EX', (object,), match.groupdict())
 
   if ex_type == 'CQ' and exchange.extra != 'NA':
-    return
+    return None
 
   if ex_type == 'CQ' or ex_type == 'REPLY':
     try:
@@ -70,7 +69,7 @@ def parse_packet(packet):
       direction = geo.azimuth(HERE, (lat, lon))
     except (ValueError, AssertionError) as err:
       logging.error("%s, %s", packet.Message, err)
-      return
+      return None
     data['coordinates'] = geoloc(lat, lon)
     data['distance'] = dist
     data['direction'] = direction
@@ -78,19 +77,20 @@ def parse_packet(packet):
                   exchange.call, exchange.to, exchange.grid, dist, direction,
                   packet.SNR, packet.DeltaTime)
   elif ex_type == "SNR" or ex_type == "SNRR":
-    exchange.snr = int(exchange.snr)
-    if exchange.to == 'W6BSD':
+    if exchange.to == 'W6BSD' and exchange.call == STATUS.call:
       STATUS.xmit = STATUS.max_tries
       logging.info("From: %-7s To: %-7s - %s: %4d - SNR: % 6.2f ΔTime % 1.2f",
-                   exchange.call, exchange.to, ex_type.lower(), exchange.snr, packet.SNR,
+                   exchange.call, exchange.to, ex_type, int(exchange.snr), packet.SNR,
                    packet.DeltaTime)
+    elif exchange.call == STATUS.call and exchange.to != 'W6BSD':
+      STATUS.xmit = 0
   elif ex_type == "R73":
     if exchange.to == 'W6BSD':
       STATUS.xmit += STATUS.max_tries
       logging.info('** From: %-7s To: %-7s  %s - SNR: % 6.3f',
                    exchange.call, exchange.to, exchange.R73, packet.SNR)
 
-  STATUS.db.calls.update_one({'call': exchange.call}, {"$set": data}, upsert=True)
+  return data
 
 
 def process_wsjt(data, ip_from):
@@ -106,12 +106,16 @@ def process_wsjt(data, ip_from):
   elif isinstance(packet, wsjtx.WSStatus):
     pass
   elif isinstance(packet, wsjtx.WSDecode):
-    parse_packet(packet)
-    logging.info(packet)
+    data = parse_packet(packet)
+    if data:
+      logging.info(packet)
+      STATUS.db.calls.update_one({'call': data['call']},
+                                 {"$set": data},
+                                 upsert=True)
   elif isinstance(packet, wsjtx.WSLogged):
     STATUS.xmit = 0
     STATUS.db.black.update_one({"call": packet.DXCall},
-                               {"$set": {"time": timestamp(), "logged": True}},
+                               {"$set": {"time": Transmit.timestamp(), "logged": True}},
                                upsert=True)
     STATUS.call = ''
     logging.info(packet)
@@ -145,7 +149,7 @@ def main():
   logging.info('Monitor IP: %s, Port: %d', BIND_ADDRESS, MONI_PORT)
 
   try:
-    xmit_thread = transmit.Transmit(STATUS, range(0, 60, 15), daemon=True)
+    xmit_thread = Transmit(STATUS, range(0, 60, 15), daemon=True)
     xmit_thread.start()
     sqmonitor = monitor.Monitor((BIND_ADDRESS, MONI_PORT), STATUS, daemon=True)
     sqmonitor.start()

@@ -14,6 +14,8 @@ import time
 from operator import itemgetter
 from datetime import datetime
 
+from pprint import pprint
+
 import wsjtx
 
 LOG = logging.getLogger('Transmit')
@@ -75,7 +77,6 @@ class Transmit(threading.Thread):
         continue
 
       call = get_grid(self.status)
-      # get a call
       # call = get_call(self.status)
       if not call:
         self.status.call = ''
@@ -91,10 +92,14 @@ class Transmit(threading.Thread):
 
       self.status.db.black.update_one(
         {"call": call['call']},
-        {"$set": {"time": timestamp(), "logged": False}},
+        {"$set": {"time": Transmit.timestamp(), "logged": False}},
         upsert=True)
     # Exit
     self.sock.close()
+
+  @staticmethod
+  def timestamp():
+    return int(datetime.utcnow().timestamp())
 
   @staticmethod
   def encode_xmit(call):
@@ -111,22 +116,25 @@ class Transmit(threading.Thread):
     return packet.raw()
 
 
-def timestamp():
-  return int(datetime.utcnow().timestamp())
-
-
 def get_grid(status):
+  us_grids = [
+    'CN', 'DN', 'EN', 'FN',
+    'CM', 'DM', 'EM', 'FM'
+  ]
   grids = ['IO', 'JO', 'KO', 'IN', 'JN', 'KN']
   calls = []
   req = status.db.calls.find({
     "to": "CQ",
-    "timestamp": {"$gt": timestamp() - 15}
+    "timestamp": {"$gt": Transmit.timestamp() - 15}
   })
   for obj in req.sort([('SNR', -1)]):
-    if obj['grid'][:2] in grids:
-      calls.append(obj)
+    if obj['grid'][:2] not in us_grids:
+      coef = obj['distance'] * 10**(obj['SNR']/10)
+      calls.append((coef, obj))
+      print('*' * 40, obj['call'], coef)
 
-  for call in calls:
+  calls.sort(key=itemgetter(0), reverse=True)
+  for _, call in calls:
     if not status.db.black.count_documents({"call": call['call']}):
       return call
   return None
@@ -136,11 +144,12 @@ def get_call(status):
   calls = []
   req = status.db.calls.find({
     "to": "CQ",
-    "timestamp": {"$gt": timestamp() - 15}
+    "timestamp": {"$gt": Transmit.timestamp() - 15}
   })
-  for rec in req:
-    coef = rec['distance'] * 10**(rec['SNR']/10)
-    calls.append((coef, rec))
+  for obj in req:
+    coef = obj['distance'] * 10**(obj['SNR']/10)
+    calls.append((coef, obj))
+    print('*' * 40, obj['call'], coef)
 
   calls.sort(key=itemgetter(0), reverse=True)
   for _, call in calls:
