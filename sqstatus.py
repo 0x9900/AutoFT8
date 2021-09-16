@@ -17,7 +17,10 @@ SQ_HEARTBEAT = 0x01
 SQ_PAUSE = 0x02
 SQ_DATA = 0x08
 
+XMIT_MAXRETRY = 5
+
 class SQStatus:
+  __xmit__ = 0
   """
   SQ Status heart beat (type = 0x0001 heartbeat)
   1  magic number   uint   (4)
@@ -35,10 +38,9 @@ class SQStatus:
   8  call           utf-8  (10)
   """
   def __init__(self):
-    self.max_tries = 4
+    self.max_tries = XMIT_MAXRETRY
 
     # Private variables
-    self._xmit = 0
     self._call = b''
     self._pause = False
     self._shutdown = False
@@ -68,7 +70,7 @@ class SQStatus:
   def encode(self):
     packet = ctypes.create_string_buffer(SQ_STRUCT.size)
     SQ_STRUCT.pack_into(packet, 0, SQ_MAGIC, SQ_VERSION, SQ_DATA, self.max_tries,
-                        self._xmit, self._pause, self._shutdown, self._call)
+                        self.xmit, self._pause, self._shutdown, self._call)
     return packet.raw
 
   def decode(self, packet):
@@ -95,19 +97,19 @@ class SQStatus:
       data = SQ_STRUCT.unpack_from(buffer)
       magic, version, pkt_type, max_tries, xmit, pause, shutdown, call = data
       self.max_tries = max_tries
-      self._xmit = xmit
+      self.xmit = xmit
       self._call = call.strip(b'\0x00')
       self._pause = pause
       self._shutdown = shutdown
 
   @property
   def xmit(self):
-    return self._xmit
+    return self.__xmit__
 
   @xmit.setter
   def xmit(self, val):
     assert isinstance(val, int)
-    self._xmit = 0 if val < 0 else val
+    self.__xmit__ = 0 if val < 0 else val
 
   @property
   def call(self):

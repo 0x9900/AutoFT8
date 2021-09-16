@@ -26,7 +26,7 @@ from transmit import Transmit
 
 
 RE_EXCHANGES = {
-  "CQ": re.compile(r'^(?P<to>CQ) ((?P<extra>.*) )(?P<call>\w+)(|/\w+) (?P<grid>[A-Z]{2}[0-9]{2})'),
+  "CQ": re.compile(r'^(?P<to>CQ) ((?P<extra>.*) |)(?P<call>\w+)(|/\w+) (?P<grid>[A-Z]{2}[0-9]{2})'),
   "REPLY": re.compile(r'^(?P<to>\w+)(|/\w+) (?P<call>\w+)(|/\w+) (?P<grid>[A-Z]{2}[0-9]{2})'),
   "SNR": re.compile(r'^(?P<to>\w+)(|/\w+) (?P<call>\w+)(|/\w+) (?P<snr>(0|[-+]\d+))'),
   "SNRR": re.compile(r'^(?P<to>\w+)(|/\w+) (?P<call>\w+)(|/\w+) R(?P<snr>(0|[-+]\d+))'),
@@ -57,10 +57,7 @@ def parse_packet(packet):
   data = match.groupdict().copy()
   data['timestamp'] = Transmit.timestamp()
   data.update(packet.as_dict())
-  exchange = type('EX', (object,), match.groupdict())
-
-  if ex_type == 'CQ' and exchange.extra != 'NA':
-    return None
+  exchange = type('EXCHANGE', (object,), match.groupdict())
 
   if ex_type == 'CQ' or ex_type == 'REPLY':
     try:
@@ -76,6 +73,9 @@ def parse_packet(packet):
     logging.debug("From: %-7s To: %-7s - %s Dist: %6d Dir: %3d SNR: % 6.2f ΔTime: %1.2f",
                   exchange.call, exchange.to, exchange.grid, dist, direction,
                   packet.SNR, packet.DeltaTime)
+    if hasattr(exchange, 'ex_type') and exchange.extra not in (None, 'NA'):
+      logging.warning('Ignoring: %s'. packet.Message)
+      return None
   elif ex_type == "SNR" or ex_type == "SNRR":
     if exchange.to == 'W6BSD' and exchange.call == STATUS.call:
       STATUS.xmit = STATUS.max_tries
@@ -149,7 +149,8 @@ def main():
   logging.info('Monitor IP: %s, Port: %d', BIND_ADDRESS, MONI_PORT)
 
   try:
-    xmit_thread = Transmit(STATUS, range(0, 60, 15), daemon=True)
+    #    xmit_thread = Transmit(STATUS, range(0, 60, 15), daemon=True)
+    xmit_thread = Transmit(STATUS, range(14, 60, 15), daemon=True)
     xmit_thread.start()
     sqmonitor = monitor.Monitor((BIND_ADDRESS, MONI_PORT), STATUS, daemon=True)
     sqmonitor.start()
@@ -164,7 +165,7 @@ def main():
     sock_wsjt.close()
 
 if __name__ == "__main__":
-  logging.basicConfig(format='%(name)s %(asctime)s %(levelname)s: %(message)s',
+  logging.basicConfig(format='%(name)s %(asctime)s %(levelname)s: %(funcName)s: %(message)s',
                       datefmt='%c', level=logging.INFO)
   HERE = geo.grid2latlon('CM87vl')
   main()

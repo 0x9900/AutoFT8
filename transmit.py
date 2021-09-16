@@ -7,14 +7,13 @@
 #
 
 import logging
+import re
 import socket
 import threading
 import time
 
 from operator import itemgetter
 from datetime import datetime
-
-from pprint import pprint
 
 import wsjtx
 
@@ -35,7 +34,7 @@ class Transmit(threading.Thread):
 
   def wait(self):
     while True:
-      for _ in range(12):
+      for _ in range(13):
         if self._killed:
           return
         time.sleep(1)
@@ -43,7 +42,7 @@ class Transmit(threading.Thread):
       while datetime.utcnow().second not in self.period:
         if self._killed:
           return
-        time.sleep(.5)
+        time.sleep(.2)
       yield
 
   def shutdown(self):
@@ -54,7 +53,13 @@ class Transmit(threading.Thread):
     LOG.debug('Stop transmit')
     stop_pkt = wsjtx.WSHaltTx()
     stop_pkt.tx = flag
-    self.sock.sendto(stop_pkt.raw(), self.status.ip_wsjt)
+    if not self.status.ip_wsjt:
+      return
+    try:
+      self.sock.sendto(stop_pkt.raw(), self.status.ip_wsjt)
+    except:
+      logging.error(self.status.ip_wsjt)
+      raise
 
   def transmit(self, packet):
     LOG.debug('Transmiting %s', packet)
@@ -117,9 +122,10 @@ class Transmit(threading.Thread):
 
 
 def get_grid(status):
+  regex = re.compile(r'^[A-Z]\d[A-Z]$')
   us_grids = [
     'CN', 'DN', 'EN', 'FN',
-    'CM', 'DM', 'EM', 'FM'
+    'CM', 'DM', 'EM', 'FM', 'EL',
   ]
   grids = ['IO', 'JO', 'KO', 'IN', 'JN', 'KN']
   calls = []
@@ -131,13 +137,17 @@ def get_grid(status):
     if obj['grid'][:2] not in us_grids:
       coef = obj['distance'] * 10**(obj['SNR']/10)
       calls.append((coef, obj))
-      print('*' * 40, obj['call'], coef)
+    elif regex.match(obj['call']):
+      coef = obj['distance'] * 10**(obj['SNR']/10)
+      calls.append((coef, obj))
 
   calls.sort(key=itemgetter(0), reverse=True)
+  logging.info([(int(c[0]), c[1]['call']) for c in calls])
   for _, call in calls:
     if not status.db.black.count_documents({"call": call['call']}):
       return call
   return None
+  # return get_call(status)
 
 
 def get_call(status):
@@ -149,9 +159,9 @@ def get_call(status):
   for obj in req:
     coef = obj['distance'] * 10**(obj['SNR']/10)
     calls.append((coef, obj))
-    print('*' * 40, obj['call'], coef)
 
   calls.sort(key=itemgetter(0), reverse=True)
+  logging.info([(int(c[0]), c[1]['call']) for c in calls])
   for _, call in calls:
     if not status.db.black.count_documents({"call": call['call']}):
       return call
