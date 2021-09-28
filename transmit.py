@@ -7,12 +7,12 @@
 #
 
 import logging
+import operator
 import re
 import socket
 import threading
 import time
 
-from operator import itemgetter
 from datetime import datetime
 
 import wsjtx
@@ -81,8 +81,7 @@ class Transmit(threading.Thread):
         self.status.xmit -= 1
         continue
 
-      call = get_grid(self.status)
-      # call = get_call(self.status)
+      call = get_any_call(self.status)
       if not call:
         self.status.call = ''
         self.stop_transmit(True)
@@ -121,36 +120,64 @@ class Transmit(threading.Thread):
     return packet.raw()
 
 
-def get_grid(status):
-  regex = re.compile(r'^[A-Z]\d[A-Z]$')
-  us_grids = [
-    'CN', 'DN', 'EN', 'FN',
-    'CM', 'DM', 'EM', 'FM', 'EL',
-  ]
-  grids = ['IO', 'JO', 'KO', 'IN', 'JN', 'KN']
+def get_eu(status):
+  grids = ['JP', 'KP', 'IO', 'JO', 'KO', 'IN', 'JN', 'KN', 'LN', 'JM', 'KM', 'LM']
   calls = []
   req = status.db.calls.find({
     "to": "CQ",
     "timestamp": {"$gt": Transmit.timestamp() - 15}
   })
   for obj in req.sort([('SNR', -1)]):
-    if obj['grid'][:2] not in us_grids:
-      coef = obj['distance'] * 10**(obj['SNR']/10)
-      calls.append((coef, obj))
-    elif regex.match(obj['call']):
+    if obj['grid'][:2] in grids:
       coef = obj['distance'] * 10**(obj['SNR']/10)
       calls.append((coef, obj))
 
-  calls.sort(key=itemgetter(0), reverse=True)
+  calls.sort(key=operator.itemgetter(0), reverse=True)
   logging.info([(int(c[0]), c[1]['call']) for c in calls])
   for _, call in calls:
     if not status.db.black.count_documents({"call": call['call']}):
       return call
   return None
-  # return get_call(status)
 
+def get_us(status):
+  grids = ['CN', 'DN', 'EN', 'FN', 'CM', 'DM', 'EM', 'FM', 'EL']
+  calls = []
+  req = status.db.calls.find({
+    "to": "CQ",
+    "timestamp": {"$gt": Transmit.timestamp() - 15}
+  })
+  for obj in req.sort([('SNR', -1)]):
+    if obj['grid'][:2] in grids:
+      coef = obj['distance'] * 10**(obj['SNR']/10)
+      calls.append((coef, obj))
 
-def get_call(status):
+  calls.sort(key=operator.itemgetter(0), reverse=True)
+  logging.info([(int(c[0]), c[1]['call']) for c in calls])
+  for _, call in calls:
+    if not status.db.black.count_documents({"call": call['call']}):
+      return call
+  return None
+
+def get_not_us(status):
+  grids = ['CN', 'DN', 'EN', 'FN', 'CM', 'DM', 'EM', 'FM', 'EL']
+  calls = []
+  req = status.db.calls.find({
+    "to": "CQ",
+    "timestamp": {"$gt": Transmit.timestamp() - 15}
+  })
+  for obj in req.sort([('SNR', -1)]):
+    if obj['grid'][:2] not in grids:
+      coef = obj['distance'] * 10**(obj['SNR']/10)
+      calls.append((coef, obj))
+
+  calls.sort(key=operator.itemgetter(0), reverse=True)
+  logging.info([(int(c[0]), c[1]['call']) for c in calls])
+  for _, call in calls:
+    if not status.db.black.count_documents({"call": call['call']}):
+      return call
+  return None
+
+def get_any_call(status):
   calls = []
   req = status.db.calls.find({
     "to": "CQ",
@@ -160,7 +187,7 @@ def get_call(status):
     coef = obj['distance'] * 10**(obj['SNR']/10)
     calls.append((coef, obj))
 
-  calls.sort(key=itemgetter(0), reverse=True)
+  calls.sort(key=operator.itemgetter(0), reverse=True)
   logging.info([(int(c[0]), c[1]['call']) for c in calls])
   for _, call in calls:
     if not status.db.black.count_documents({"call": call['call']}):
