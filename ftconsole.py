@@ -64,12 +64,11 @@ class FTCtl(QMainWindow):
     tb1 = self.addToolBar('Actions')
     self.textEdit = QTextBrowser() #QTextEdit()
     # self.textEdit.setFont(QFont('Courier', 14))
-    self.textEdit.setFont(QFont('Latin Modern Mono', 16))
+    self.textEdit.setFont(QFont('Andale Mono', 16))
     self.textEdit.setOpenExternalLinks(True)
     self.textEdit.setStyleSheet(TEXT_STYLE)
-
-    self.setCentralWidget(self.textEdit)
     self.textEdit.setText("AutoFT Started...")
+    self.setCentralWidget(self.textEdit)
 
     exitAction = QAction('Exit', self)
     exitAction.setShortcut('Ctrl+Q')
@@ -100,16 +99,6 @@ class FTCtl(QMainWindow):
     aboutAction.setStatusTip('About')
     aboutAction.triggered.connect(self.about)
 
-    self.statusBar()
-
-    # menubar = self.menuBar()
-    # fileMenu = menubar.addMenu('&File')
-    # fileMenu.addAction(pauseAction)
-    # fileMenu.addAction(runAction)
-    # fileMenu.addAction(exitAction)
-    # fileMenu2=menubar.addMenu('&Help')
-    # fileMenu2.addAction(aboutAction)
-
     tb1 = self.addToolBar('Actions')
     tb1.addAction(pauseAction)
     tb1.addAction(runAction)
@@ -125,6 +114,8 @@ class FTCtl(QMainWindow):
     self.setGeometry(100, 100, 720, 480)
     self.setWindowTitle('AutoFT Control')
     self.setWindowIcon(QIcon('text.png'))
+    self.statusBar()
+
     self.show()
 
   def get_status(self):
@@ -162,12 +153,20 @@ class FTCtl(QMainWindow):
   def pause(self):
     self.textEdit.append("Transmission paused...")
     self.textEdit.moveCursor(QTextCursor.End)
-    self.sock.sendto(self.status.pause(True), SRV_ADDR)
+    try:
+      self.sock.sendto(self.status.pause(True), SRV_ADDR)
+    except (socket.timeout, socket.error) as err:
+      self.statusBar().showMessage('Connection {} the sequencer is not running'.format(err))
+      return
 
   def run(self):
     self.textEdit.append("Transmission active...")
     self.textEdit.moveCursor(QTextCursor.End)
-    self.sock.sendto(self.status.pause(False), SRV_ADDR)
+    try:
+      self.sock.sendto(self.status.pause(False), SRV_ADDR)
+    except (socket.timeout, socket.error) as err:
+      self.statusBar().showMessage('Connection {} the sequencer is not running'.format(err))
+      return
 
   def purge(self):
     self.textEdit.append('Purge calls...')
@@ -181,11 +180,16 @@ class FTCtl(QMainWindow):
 
   def skip(self):
     sqs = sqstatus.SQStatus()
-    self.sock.sendto(self.status.heartbeat(), SRV_ADDR)
-    data, ip_addr = self.sock.recvfrom(1024)
-    sqs.decode(data)
-    sqs.xmit = 0
-    self.sock.sendto(sqs.encode(), ip_addr)
+    try:
+      self.sock.sendto(self.status.heartbeat(), SRV_ADDR)
+      data, ip_addr = self.sock.recvfrom(1024)
+      sqs.decode(data)
+      sqs.xmit = 0
+      self.sock.sendto(sqs.encode(), ip_addr)
+    except (socket.timeout, socket.error) as err:
+      self.statusBar().showMessage('Connection {} the sequencer is not running'.format(err))
+      return
+
     self.textEdit.append('Skip call...'.format(sqs.call))
     self.textEdit.moveCursor(QTextCursor.End)
 
