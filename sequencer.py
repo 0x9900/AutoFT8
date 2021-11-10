@@ -5,7 +5,6 @@
 # Copyright (c) 2021, Fred Cirera
 # All rights reserved.
 #
-
 import logging
 import re
 import select
@@ -22,8 +21,8 @@ import monitor
 import sqstatus
 import wsjtx
 
+from config import Config
 from transmit import Transmit
-
 
 RE_EXCHANGES = {
   "CQ": re.compile(r'^(?P<to>CQ) ((?P<extra>.*) |)(?P<call>\w+)(|/\w+) (?P<grid>[A-Z]{2}[0-9]{2})'),
@@ -33,10 +32,6 @@ RE_EXCHANGES = {
   "R73": re.compile(r'^(?P<to>\w+)(|/\w+) (?P<call>\w+)(|/\w+) (?P<R73>(RRR|R*73))'),
 }
 
-BIND_ADDRESS = '127.0.0.1'
-WSJT_PORT = 2238
-MONI_PORT = 2240
-
 STATUS = sqstatus.SQStatus()
 
 def geoloc(lat, lon):
@@ -44,7 +39,8 @@ def geoloc(lat, lon):
 
 def parse_packet(packet):
   """Save the traffic in the database"""
-
+  config = Config()
+  here = geo.grid2latlon(config.location)
   for ex_type, regex in RE_EXCHANGES.items():
     match = regex.match(packet.Message)
     if match:
@@ -57,13 +53,13 @@ def parse_packet(packet):
   data = match.groupdict().copy()
   data['timestamp'] = Transmit.timestamp()
   data.update(packet.as_dict())
-  exchange = type('EXCHANGE', (object,), match.groupdict())
+  exchange = type('EXCHANGE', (object, ), match.groupdict())
 
   if ex_type == 'CQ' or ex_type == 'REPLY':
     try:
       lat, lon = geo.grid2latlon(exchange.grid)
-      dist = geo.distance(HERE, (lat, lon))
-      direction = geo.azimuth(HERE, (lat, lon))
+      dist = geo.distance(here, (lat, lon))
+      direction = geo.azimuth(here, (lat, lon))
     except (ValueError, AssertionError) as err:
       logging.error("%s, %s", packet.Message, err)
       return None
@@ -136,23 +132,26 @@ def process(sock):
 
 def main():
   logging.info('Starting auto ham')
-  STATUS.db = MongoClient('localhost').wsjt
+  config = Config()
+
+  STATUS.db = MongoClient(config.mongo_server).wsjt
 
   # WSJT-X server channel
-  sock_wsjt = socket.socket(socket.AF_INET,socket.SOCK_DGRAM)
+  sock_wsjt = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
   sock_wsjt.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
   sock_wsjt.setblocking(False) # Set socket to non-blocking mode
   sock_wsjt.setblocking(0)
-  sock_wsjt.bind((BIND_ADDRESS, WSJT_PORT))
+  bind_addr = socket.gethostbyname(config.bind_address)
+  sock_wsjt.bind((bind_addr, config.wsjt_port))
 
-  logging.info('WSJT-X  IP: %s, Port: %d', BIND_ADDRESS, WSJT_PORT)
-  logging.info('Monitor IP: %s, Port: %d', BIND_ADDRESS, MONI_PORT)
+  logging.info('WSJT-X  IP: %s, Port: %d', bind_addr, config.wsjt_port)
+  logging.info('Monitor IP: %s, Port: %d', bind_addr, config.monitor_port)
 
   try:
     #    xmit_thread = Transmit(STATUS, range(0, 60, 15), daemon=True)
     xmit_thread = Transmit(STATUS, range(14, 60, 15), daemon=True)
     xmit_thread.start()
-    sqmonitor = monitor.Monitor((BIND_ADDRESS, MONI_PORT), STATUS, daemon=True)
+    sqmonitor = monitor.Monitor((bind_addr, config.monitor_port), STATUS, daemon=True)
     sqmonitor.start()
     process(sock_wsjt)
     time.sleep(300)
@@ -166,6 +165,5 @@ def main():
 
 if __name__ == "__main__":
   logging.basicConfig(format='%(name)s %(asctime)s %(levelname)s: %(funcName)s: %(message)s',
-                      datefmt='%c', level=logging.INFO)
-  HERE = geo.grid2latlon('CM87vl')
+                      datefmt='%c', level=logging.DEBUG)
   main()
