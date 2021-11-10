@@ -2,7 +2,7 @@
 #
 """
 AutoFT is a program that takes complete control
-of WSJTX and fully automatizes the calling sequence.
+of WSJTX and fully automatate the calling sequence.
 AutoFT try to figure out which of the CQ call has
 the best chances of succeeding.
 
@@ -21,16 +21,20 @@ from pymongo import MongoClient
 
 from PyQt5.QtCore import QTimer
 from PyQt5.QtGui import (QIcon, QTextCursor, QFont)
-from PyQt5.QtWidgets import (QMainWindow, QTextBrowser, QTextEdit, QAction, QApplication,QMessageBox,QFileDialog)
+from PyQt5.QtWidgets import (QMainWindow, QTextBrowser, QTextEdit, QAction,
+                             QApplication, QMessageBox, QFileDialog)
 
 import sqstatus
 
-SRV_ADDR = ('127.0.0.1', 2240)
-DB = MongoClient('localhost').wsjt
+from config import Config
+
+CONFIG = Config()
+SRV_ADDR = (CONFIG.bind_address, CONFIG.monitor_port)
+DB = MongoClient(CONFIG.mongo_server).wsjt
 
 TEXT_STYLE = """QTextBrowser {
-  background-color: rgb(0,0,30);
-  border-color: rgb(0,0,0);
+  background-color: rgb(0, 0, 30);
+  border-color: rgb(0, 0, 0);
   border-width: 5px;
   border-style: solid;
 }"""
@@ -44,7 +48,7 @@ class FTCtl(QMainWindow):
 
   def __init__(self):
     super().__init__()
-    self.sock = socket.socket(socket.AF_INET,socket.SOCK_DGRAM)
+    self.sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
     self.sock.settimeout(.5)
     self.status = sqstatus.SQStatus()
 
@@ -170,7 +174,7 @@ class FTCtl(QMainWindow):
 
   def purge(self):
     self.textEdit.append('Purge calls...')
-    req = dict(logged=False, time={"$lt": delta(900)})
+    req = dict(logged=False, time={"$lt": delta(120)})
     idx = 0
     for idx, obj in enumerate(DB.black.find(req), start=1):
       self.textEdit.append("Delete: {}, {}".format(obj['call'], datetime.fromtimestamp(obj['time'])))
@@ -195,7 +199,7 @@ class FTCtl(QMainWindow):
 
 
 if __name__ == '__main__':
-
+  config = Config()
   app = QApplication(sys.argv)
   ex = FTCtl()
   sys.exit(app.exec_())

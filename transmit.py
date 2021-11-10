@@ -81,7 +81,7 @@ class Transmit(threading.Thread):
         self.status.xmit -= 1
         continue
 
-      call = get_any_call(self.status)
+      call = get_not_us(self.status)
       if not call:
         self.status.call = ''
         self.stop_transmit(True)
