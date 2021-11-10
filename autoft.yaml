@@ -1,0 +1,10 @@
+#
+# AutoFT configuration file
+#
+
+mongo_server: "localhost"
+bind_address: "127.0.0.1"
+wsjt_port: 2238
+monitor_port: 2240
+call: "W6BSD"
+location: "CM87vl"
