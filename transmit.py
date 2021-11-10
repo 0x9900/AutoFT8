@@ -31,7 +31,6 @@ class Transmit(threading.Thread):
     self.status = status
     self._killed = False
 
-
   def wait(self):
     while True:
       for _ in range(13):

@@ -7,14 +7,19 @@
 #
 
 import os
-import json
+import yaml
 import logging
 
 LOG = logging.getLogger('Config')
 
-BIND_ADDRESS = '127.0.0.1'
-WSJT_PORT = 2238
-MONI_PORT = 2240
+DEFAULT_CONFIG = """
+  mongo_server: "localhost"
+  bind_address: "127.0.0.1"
+  wsjt_port: 2238
+  monitor_port: 2240
+  call: "N0CALL"
+  location: "CM87vl"
+"""
 
 class Config:
   _instance = None
@@ -29,36 +34,21 @@ class Config:
     if self.config_data:
       return
 
-    # default config values
-    self.config_data = {
-      'mongo_server': 'localhost',
-      'bind_address': BIND_ADDRESS,
-      'wsjt_port': WSJT_PORT,
-      'monitor_port': MONI_PORT,
-      'call': 'N0CALL',
-      'location': 'CM87vl'
-    }
-
-    config_filename = 'autoft.json'
+    config_filename = 'autoft.yaml'
     for path in ['/etc', '~', '.']:
       filename = os.path.expanduser(os.path.join(path, config_filename))
       if os.path.exists(filename):
         LOG.debug('Reading config file: %s', filename)
         self._read_config(filename)
 
-  def to_json(self):
-    return json.dumps(self.config_data, indent=4)
+  def to_yaml(self):
+    return yaml.dump(self.config_data)
 
   def _read_config(self, filename):
     try:
       with open(filename, 'r') as confd:
-        lines = []
-        for line in confd:
-          line = line.strip()
-          if not line or line.startswith('#'):
-            continue
-          lines.append(line)
-        self.config_data.update(json.loads('\n'.join(lines)))
+        configuration = yaml.safe_load(confd)
+      self.config_data.update(configuration)
     except ValueError as err:
       LOG.error('Configuration error: "%s"', err)
       sys.exit(os.EX_CONFIG)
