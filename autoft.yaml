@@ -8,3 +8,41 @@ wsjt_port: 2238
 monitor_port: 2240
 call: "W6BSD"
 location: "CM87vl"
+select_method: "any.Any"
+
+# Plugins configurations
+
+Any:
+  zone: 'anywhere'
+
+# Select call from the follwing grid squares.
+# This roughly correspond to the Europe
+Grid:
+  squares:
+    - JP
+    - KP
+    - IO
+    - JO
+    - KO
+    - IN
+    - JN
+    - KN
+    - LN
+    - JM
+    - KM
+    - LM
+
+NotGrid:
+  squares:
+    - JP
+    - KP
+    - IO
+    - JO
+    - KO
+    - IN
+    - JN
+    - KN
+    - LN
+    - JM
+    - KM
+    - LM

@@ -53,6 +53,11 @@ class Config:
       LOG.error('Configuration error: "%s"', err)
       sys.exit(os.EX_CONFIG)
 
+  def get(self, key, default=None):
+    if key not in self.config_data:
+      return default
+    return type(key, (object, ), self.config_data[key])
+
   def __getattr__(self, attr):
     if attr not in self.config_data:
       raise AttributeError("'{}' object has no attribute '{}'".format(self.__class__, attr))
