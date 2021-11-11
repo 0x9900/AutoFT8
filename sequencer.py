@@ -165,5 +165,5 @@ def main():
 
 if __name__ == "__main__":
   logging.basicConfig(format='%(name)s %(asctime)s %(levelname)s: %(funcName)s: %(message)s',
-                      datefmt='%c', level=logging.DEBUG)
+                      datefmt='%c', level=logging.INFO)
   main()
