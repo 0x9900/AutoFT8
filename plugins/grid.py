@@ -2,6 +2,7 @@
 
 import logging
 import operator
+import re
 
 from . import CallSelector
 
@@ -9,15 +10,19 @@ LOG = logging.getLogger('plugins.Grid')
 
 class Grid(CallSelector):
 
+  def __init__(self, config, db):
+    super().__init__(config, db)
+    regexps = [f'({r})' for r in self.config.squares]
+    self.match = re.compile('|'.join(regexps)).match
+
   def get(self):
-    grids = self.config.squares
     calls = []
     req = self.db.calls.find({
       "to": "CQ",
       "timestamp": {"$gt": Grid.timestamp() - 15}
     })
     for obj in req.sort([('SNR', -1)]):
-      if obj['grid'][:2] in grids:
+      if self.match(obj['grid']):
         coef = obj['distance'] * 10**(obj['SNR']/10)
         calls.append((coef, obj))
 
