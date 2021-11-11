@@ -12,7 +12,7 @@ class NotGrid(CallSelector):
 
   def __init__(self, config, db):
     super().__init__(config, db)
-    regexps = [f'({r})' for r in self.config.squares]
+    regexps = [f'(?:{r})' for r in self.config.squares]
     self.match = re.compile('|'.join(regexps)).match
 
   def get(self):
