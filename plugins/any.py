@@ -1,3 +1,9 @@
+#
+# BSD 3-Clause License
+#
+# Copyright (c) 2021, Fred W6BSD
+# All rights reserved.
+#
 
 import logging
 import operator

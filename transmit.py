@@ -1,7 +1,7 @@
 #
 # BSD 3-Clause License
 #
-# Copyright (c) 2021, Fred Cirera
+# Copyright (c) 2021, Fred W6BSD
 # All rights reserved.
 # See licence file for more information.
 #
