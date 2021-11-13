@@ -1,6 +1,9 @@
 #
 # AutoFT configuration file
 #
+# The sequencer will look for the configuration file in:
+# `/etc/autoft.yaml`, `~/autoft.yaml` or `./autoft.yaml`
+#
 
 mongo_server: "localhost"
 bind_address: "127.0.0.1"
@@ -8,7 +11,8 @@ wsjt_port: 2238
 monitor_port: 2240
 call: "W6BSD"
 location: "CM87vl"
-select_method: "grid.NotGrid"      # plugin name: <module.name>.<class>
+max_tries: 5                    # It's better to leave it at 5
+select_method: "any.Any"        # plugin name: <module.name>.<class>
 
 # Plugins configurations
 # Select call from the follwing grid squares.

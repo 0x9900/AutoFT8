@@ -1,6 +1,12 @@
 #!/usr/bin/env python
-# -*- mode: markdown; coding: utf-8 -*-
+# -*- coding: utf-8 -*-
 #
+# BSD 3-Clause License
+#
+# Copyright (c) 2021, Fred W6BSD
+# All rights reserved.
+#
+
 """
 AutoFT is a program that takes complete control
 of WSJTX and fully automatate the calling sequence.

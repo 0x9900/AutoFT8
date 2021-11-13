@@ -1,4 +1,10 @@
 #
+# BSD 3-Clause License
+#
+# Copyright (c) 2021, Fred W6BSD
+# All rights reserved.
+#
+#
 
 import logging
 import operator
@@ -43,7 +49,7 @@ class Grid(GridBase):
         return call
     return None
 
-  
+
 class NotGrid(GridBase):
 
   def get(self):

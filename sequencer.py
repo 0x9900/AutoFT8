@@ -2,7 +2,7 @@
 #
 # BSD 3-Clause License
 #
-# Copyright (c) 2021, Fred Cirera
+# Copyright (c) 2021, Fred W6BSD
 # All rights reserved.
 #
 import logging
@@ -73,17 +73,23 @@ def parse_packet(packet):
       logging.warning('Ignoring: %s'. packet.Message)
       return None
   elif ex_type == "SNR" or ex_type == "SNRR":
-    if exchange.to == 'W6BSD' and exchange.call == STATUS.call:
+    if exchange.to == config.call and exchange.call == STATUS.call:
       STATUS.xmit = STATUS.max_tries
-      logging.info("From: %-7s To: %-7s - %s: %4d - SNR: % 6.2f ΔTime % 1.2f",
-                   exchange.call, exchange.to, ex_type, int(exchange.snr), packet.SNR,
-                   packet.DeltaTime)
-    elif exchange.call == STATUS.call and exchange.to != 'W6BSD':
-      STATUS.xmit = 0
-  elif ex_type == "R73":
-    if exchange.to == 'W6BSD':
+    elif exchange.to == config.call and not STATUS.call:
+      logging.warning("Out of sequence From: %-7s To: %-7s - %s: SNR: % 6.2f",
+                      exchange.call, exchange.to, ex_type, packet.SNR)
       STATUS.xmit += STATUS.max_tries
-      logging.info('** From: %-7s To: %-7s  %s - SNR: % 6.3f',
+      STATUS.call = exchange.call
+    elif exchange.to != config.call and exchange.call == STATUS.call:
+      STATUS.xmit = 0
+    if exchange.to == config.call:
+      logging.warning("From: %-7s To: %-7s - %s: %4d - SNR: % 6.2f ΔTime % 1.2f",
+                      exchange.call, exchange.to, ex_type, int(exchange.snr), packet.SNR,
+                      packet.DeltaTime)
+  elif ex_type == "R73":
+    if exchange.to == config.call:
+      STATUS.xmit += 2
+      logging.info('From: %-7s To: %-7s  %s - SNR: % 6.3f',
                    exchange.call, exchange.to, exchange.R73, packet.SNR)
 
   return data
@@ -114,7 +120,7 @@ def process_wsjt(data, ip_from):
                                {"$set": {"time": Transmit.timestamp(), "logged": True}},
                                upsert=True)
     STATUS.call = ''
-    logging.info(packet)
+    # logging.info(packet)
   else:
     logging.warning(packet)
 
@@ -135,6 +141,10 @@ def main():
   config = Config()
 
   STATUS.db = MongoClient(config.mongo_server).wsjt
+  try:
+    STATUS.max_tries = config.max_tries
+  except AttributeError:
+    pass
 
   # WSJT-X server channel
   sock_wsjt = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
