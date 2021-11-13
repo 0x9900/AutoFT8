@@ -135,6 +135,10 @@ def main():
   config = Config()
 
   STATUS.db = MongoClient(config.mongo_server).wsjt
+  try:
+    STATUS.max_tries = config.max_tries
+  except AttributeError:
+    pass
 
   # WSJT-X server channel
   sock_wsjt = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)

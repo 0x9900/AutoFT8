@@ -8,7 +8,8 @@ wsjt_port: 2238
 monitor_port: 2240
 call: "W6BSD"
 location: "CM87vl"
-select_method: "grid.NotGrid"      # plugin name: <module.name>.<class>
+max_tries: 5                    # It's better to leave it at 5
+select_method: "grid.NotGrid"   # plugin name: <module.name>.<class>
 
 # Plugins configurations
 # Select call from the follwing grid squares.
