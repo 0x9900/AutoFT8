@@ -76,8 +76,7 @@ class Transmit(threading.Thread):
   def run(self):
     # Wait for the very end of the sequence
     for _ in self.wait():
-
-      LOG.warning(self.status)
+      # LOG.warning(self.status)
       if self.status.is_pause():
         self.status.call = ''
         self.status.xmit = 0
@@ -94,7 +93,7 @@ class Transmit(threading.Thread):
         self.stop_transmit(True)
         continue
 
-      LOG.warning('Calling: %s dist: %d SNR: %d', call['call'], int(call['distance']), call['SNR'])
+      LOG.info('Calling: %s dist: %d SNR: %d', call['call'], int(call['distance']), call['SNR'])
       self.status.xmit = self.status.max_tries
       self.status.call = call['call']
       # encode the packet and start transmitting.
