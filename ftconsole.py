@@ -1,4 +1,5 @@
 #!/usr/bin/env python
+# -*- mode: markdown; coding: utf-8 -*-
 #
 """
 AutoFT is a program that takes complete control
@@ -99,6 +100,11 @@ class FTCtl(QMainWindow):
     skipAction.setStatusTip('Skip this call')
     skipAction.triggered.connect(self.skip)
 
+    clearAction=QAction('Clear', self)
+    clearAction.setShortcut('Ctrl+L')
+    clearAction.setStatusTip('Clear screen')
+    clearAction.triggered.connect(self.clear)
+
     aboutAction=QAction('About', self)
     aboutAction.setStatusTip('About')
     aboutAction.triggered.connect(self.about)
@@ -108,6 +114,7 @@ class FTCtl(QMainWindow):
     tb1.addAction(runAction)
     tb1.addAction(skipAction)
     tb1.addAction(purgeAction)
+    tb1.addAction(clearAction)
 
     tb2 = self.addToolBar('About')
     tb2.addAction(aboutAction)
@@ -133,9 +140,14 @@ class FTCtl(QMainWindow):
     self.status.decode(data)
     self.statusBar().showMessage('Transmission: {}'.format('Paused' if self.status.is_pause() else 'On'))
 
-    msg = ('Call: <a href="http://www.qrz.com/db/{0.call}">{0.call}</a> '
-           '- Xmit sequence: {0.xmit} - Max Tries: {0.max_tries} '
-           '- Pause: {0._pause}').format(self.status)
+    if self.status.call:
+      msg = ('Call: <a href="http://www.qrz.com/db/{0.call}">▤</a> '
+             '- <b>{0.call}</b>'
+             '- Xmit seq: {0.xmit} '
+             #'- Max Tries: {0.max_tries} '
+             '- Pause: {0._pause}').format(self.status)
+    else:
+      msg = 'No call selected'
 
     if not self.status.is_pause() and self._cache != msg:
       self._cache = msg
@@ -195,6 +207,10 @@ class FTCtl(QMainWindow):
       return
 
     self.textEdit.append('Skip call...'.format(sqs.call))
+    self.textEdit.moveCursor(QTextCursor.End)
+
+  def clear(self):
+    self.textEdit.setText('')
     self.textEdit.moveCursor(QTextCursor.End)
 
 

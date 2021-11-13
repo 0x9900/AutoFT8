@@ -8,21 +8,19 @@ wsjt_port: 2238
 monitor_port: 2240
 call: "W6BSD"
 location: "CM87vl"
-select_method: "grid.Grid"      # plugin name: <module.name>.<class>
+select_method: "grid.NotGrid"      # plugin name: <module.name>.<class>
 
 # Plugins configurations
 # Select call from the follwing grid squares.
 Grid:
   squares:
-    - ^[CDEF]N
-    - ^[CDEF]M
+    - ^[CDEF][NM]
     - ^EL
 
 # Select calls outside the following grid squares.
 NotGrid:
   squares:
-    - ^[CDEF]N
-    - ^[CDEF]M
+    - ^[CDEF][NM]
     - ^EL
 
 # uk grid
