@@ -38,7 +38,7 @@ class SQStatus:
   8  call           utf-8  (10)
   """
   def __init__(self):
-    self.max_tries = XMIT_MAXRETRY
+    self._max_tries = XMIT_MAXRETRY
 
     # Private variables
     self._call = b''
@@ -50,7 +50,7 @@ class SQStatus:
     self._ip_monit = None
 
   def __repr__(self):
-    msg = ("{0.__class__} Xmit:{0.xmit} Max_Tries: {0.max_tries} "
+    msg = ("{0.__class__} Xmit:{0.xmit} Max_Tries: {0._max_tries} "
            "Call: {0.call} Pause: {0._pause}")
     return msg.format(self)
 
@@ -69,7 +69,7 @@ class SQStatus:
 
   def encode(self):
     packet = ctypes.create_string_buffer(SQ_STRUCT.size)
-    SQ_STRUCT.pack_into(packet, 0, SQ_MAGIC, SQ_VERSION, SQ_DATA, self.max_tries,
+    SQ_STRUCT.pack_into(packet, 0, SQ_MAGIC, SQ_VERSION, SQ_DATA, self._max_tries,
                         self.xmit, self._pause, self._shutdown, self._call)
     return packet.raw
 
@@ -96,11 +96,22 @@ class SQStatus:
       buffer = ctypes.create_string_buffer(packet, SQ_STRUCT.size)
       data = SQ_STRUCT.unpack_from(buffer)
       magic, version, pkt_type, max_tries, xmit, pause, shutdown, call = data
-      self.max_tries = max_tries
+      self._max_tries = max_tries
       self.xmit = xmit
       self._call = call.strip(b'\0x00')
       self._pause = pause
       self._shutdown = shutdown
+
+  @property
+  def max_tries(self):
+    return self._max_tries
+
+  @max_tries.setter
+  def max_tries(self, val):
+    assert isinstance(val, int)
+    if not 1 < val < 15:
+      raise ValueError('The max_tries value must be between 1 and 15')
+    self._max_tries = val
 
   @property
   def xmit(self):
