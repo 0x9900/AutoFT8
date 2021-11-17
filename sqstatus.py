@@ -61,6 +61,8 @@ class SQStatus:
     return packet.raw
 
   def pause(self, flag=True):
+    self.__xmit__ = 0
+    self._call = b''
     self._pause = flag
     sq_struct = struct.Struct('!IHH?')
     packet = ctypes.create_string_buffer(sq_struct.size)
@@ -121,6 +123,8 @@ class SQStatus:
   def xmit(self, val):
     assert isinstance(val, int)
     self.__xmit__ = 0 if val < 0 else val
+    if self.__xmit__ == 0:
+      self._call = b''
 
   @property
   def call(self):

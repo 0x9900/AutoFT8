@@ -27,8 +27,7 @@ from transmit import Transmit
 RE_EXCHANGES = {
   "CQ": re.compile(r'^(?P<to>CQ) ((?P<extra>.*) |)(?P<call>\w+)(|/\w+) (?P<grid>[A-Z]{2}[0-9]{2})'),
   "REPLY": re.compile(r'^(?P<to>\w+)(|/\w+) (?P<call>\w+)(|/\w+) (?P<grid>[A-Z]{2}[0-9]{2})'),
-  "SNR": re.compile(r'^(?P<to>\w+)(|/\w+) (?P<call>\w+)(|/\w+) (?P<snr>(0|[-+]\d+))'),
-  "SNRR": re.compile(r'^(?P<to>\w+)(|/\w+) (?P<call>\w+)(|/\w+) R(?P<snr>(0|[-+]\d+))'),
+  "SNR": re.compile(r'^(?P<to>\w+)(|/\w+) (?P<call>\w+)(|/\w+) (?:R|)(?P<snr>(0|[-+]\d+))'),
   "R73": re.compile(r'^(?P<to>\w+)(|/\w+) (?P<call>\w+)(|/\w+) (?P<R73>(RRR|R*73))'),
 }
 
@@ -69,28 +68,13 @@ def parse_packet(packet):
     logging.debug("From: %-7s To: %-7s - %s Dist: %6d Dir: %3d SNR: % 6.2f ΔTime: %1.2f",
                   exchange.call, exchange.to, exchange.grid, dist, direction,
                   packet.SNR, packet.DeltaTime)
-    if hasattr(exchange, 'ex_type') and exchange.extra not in (None, 'NA'):
-      logging.warning('Ignoring: %s'. packet.Message)
-      return None
-  elif ex_type == "SNR" or ex_type == "SNRR":
-    if exchange.to == config.call and exchange.call == STATUS.call:
-      STATUS.xmit = STATUS.max_tries
-    elif exchange.to == config.call and not STATUS.call:
-      logging.warning("Out of sequence From: %-7s To: %-7s - %s: SNR: % 6.2f",
-                      exchange.call, exchange.to, ex_type, packet.SNR)
-      STATUS.xmit += STATUS.max_tries
-      STATUS.call = exchange.call
-    elif exchange.to != config.call and exchange.call == STATUS.call:
-      STATUS.xmit = 0
-    if exchange.to == config.call:
-      logging.warning("From: %-7s To: %-7s - %s: %4d - SNR: % 6.2f ΔTime % 1.2f",
-                      exchange.call, exchange.to, ex_type, int(exchange.snr), packet.SNR,
-                      packet.DeltaTime)
+  elif ex_type == "SNR":
+    logging.debug("From: %-7s To: %-7s - %s: %4d - SNR: % 6.2f ΔTime % 1.2f",
+                    exchange.call, exchange.to, ex_type, int(exchange.snr), packet.SNR,
+                    packet.DeltaTime)
   elif ex_type == "R73":
-    if exchange.to == config.call:
-      STATUS.xmit += 2
-      logging.info('From: %-7s To: %-7s  %s - SNR: % 6.3f',
-                   exchange.call, exchange.to, exchange.R73, packet.SNR)
+    logging.debug('From: %-7s To: %-7s  %s - SNR: % 6.3f',
+                 exchange.call, exchange.to, exchange.R73, packet.SNR)
 
   return data
 
@@ -98,29 +82,28 @@ def parse_packet(packet):
 def process_wsjt(data, ip_from):
   try:
     packet = wsjtx.ft8_decode(data)
+    logging.debug(packet)
   except (IOError, NotImplementedError) as err:
     logging.error(err)
     return
 
-  logging.debug(packet)
   if isinstance(packet, wsjtx.WSHeartbeat):
     STATUS.ip_wsjt = ip_from
   elif isinstance(packet, wsjtx.WSStatus):
     pass
   elif isinstance(packet, wsjtx.WSDecode):
     data = parse_packet(packet)
-    if data:
-      logging.info(packet)
-      STATUS.db.calls.update_one({'call': data['call']},
-                                 {"$set": data},
-                                 upsert=True)
+    if not data:
+      return
+    STATUS.db.calls.update_one({'call': data['call']},
+                               {"$set": data},
+                               upsert=True)
   elif isinstance(packet, wsjtx.WSLogged):
-    STATUS.xmit = 0
     STATUS.db.black.update_one({"call": packet.DXCall},
                                {"$set": {"time": Transmit.timestamp(), "logged": True}},
                                upsert=True)
     STATUS.call = ''
-    # logging.info(packet)
+    STATUS.xmit = 0
   else:
     logging.warning(packet)
 
