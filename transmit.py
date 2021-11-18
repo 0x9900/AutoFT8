@@ -148,7 +148,7 @@ class Transmit(threading.Thread):
     if not call:
       return
 
-    LOG.debug('req =', request)
+    LOG.debug('req = %s', request)
     record = self.status.db.calls.find_one(request)
     if not record or record['to'] not in ('CQ',  self.call):
       record = None
@@ -161,7 +161,7 @@ class Transmit(threading.Thread):
       "timestamp": {"$gt": Transmit.timestamp() - 15}
     }
 
-    LOG.debug('req =', request)
+    LOG.debug('req = %s', request)
     record = self.status.db.calls.find(request)
     for call in record:
       coef = Transmit.coefficient(call['distance'], call['SNR'])
