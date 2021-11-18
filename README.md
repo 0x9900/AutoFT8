@@ -10,26 +10,38 @@ After a receive sequence, the program calculates, using the distance, SNR[^1], a
 
 ## Auto FT8 YAML Configuration
 
-- "mongo_server": IP address or hostname of the mongodb database.
-Type: string, Default: "localhost"
+**mongo_server**: IP address or hostname of the MongoDB database.
 
-- "bind_address" is the ipaddress of the sequencer.
-Type: string, Default: "127.0.0.1"
+    Type: string,
+    Default: "localhost"
 
-- "wsjt_port": is the UDP communication port port between the sequenser and WSJT-X.
-Type: integer, Default: 2238
+**bind_address** is the IP address of the sequencer.
 
-- "monitor_port": is the UDP communication port between the sequenser and ftconsole.
+    Type: string,
+    Default: "127.0.0.1"
+
+**wsjt_port**: is the UDP communication port between the sequencer and WSJT-X.
+
+    Type: integer,
+    Default: 2238
+
+**monitor_port**: is the UDP communication port between the sequencer and ftconsole.
 This port is only for AutoFT internal use. Do not set that port in WSJT-X configuration.
-Type: integer, Default: 2240
 
-- "call": Operator call sign.
-This field is mandatory and shoule be set by the operator.
-Type: string, Default: "N0CALL"
+    Type: integer,
+    Default: 2240
 
-- "location": Operator location. This field is used to calculate the distance and azimuth between your station and the calling station.
-This field should be set by the operator.
-Type: string, Default: "CM87vl"
+**call**: Operator call sign.
+This field is mandatory and should be set by the operator.
+
+    Type: string,
+    Default: "N0CALL"
+
+**location**: Operator location. This field is used to calculate the distance and azimuth between your station and the calling station.
+The operator should set this field.
+
+    Type: string,
+    Default: "CM87vl"
 
 
 [^1]: Signal to Noise Ratio

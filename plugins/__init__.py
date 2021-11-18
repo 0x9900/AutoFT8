@@ -21,3 +21,7 @@ class CallSelector(ABC):
   @staticmethod
   def timestamp():
     return int(datetime.utcnow().timestamp())
+
+  @staticmethod
+  def coefficient(distance, snr):
+    return distance * 10**(snr/10)

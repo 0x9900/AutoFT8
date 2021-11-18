@@ -21,7 +21,7 @@ class Any(CallSelector):
       "timestamp": {"$gt": Any.timestamp() - 15}
     })
     for obj in req:
-      coef = obj['distance'] * 10**(obj['SNR']/10)
+      coef = Any.coefficient(obj['distance'], obj['SNR'])
       calls.append((coef, obj))
 
     calls.sort(key=operator.itemgetter(0), reverse=True)

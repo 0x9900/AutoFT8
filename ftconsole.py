@@ -28,7 +28,7 @@ from pymongo import MongoClient
 
 from PyQt5.QtCore import QTimer
 from PyQt5.QtGui import (QIcon, QTextCursor, QFont)
-from PyQt5.QtWidgets import (QMainWindow, QTextBrowser, QTextEdit, QAction,
+from PyQt5.QtWidgets import (QMainWindow, QTextBrowser, QAction,
                              QApplication, QMessageBox, QFileDialog)
 
 import sqstatus
@@ -63,7 +63,7 @@ class FTCtl(QMainWindow):
     self.initUI()
 
     self.timer = QTimer()
-    self.timer.setInterval(1000)
+    self.timer.setInterval(2500)
     self.timer.timeout.connect(self.get_status)
     self.timer.start()
 
@@ -73,13 +73,13 @@ class FTCtl(QMainWindow):
     self.setFont(font)
 
     tb1 = self.addToolBar('Actions')
-    self.textEdit = QTextBrowser() #QTextEdit()
-    # self.textEdit.setFont(QFont('Courier', 14))
-    self.textEdit.setFont(QFont('Andale Mono', 16))
-    self.textEdit.setOpenExternalLinks(True)
-    self.textEdit.setStyleSheet(TEXT_STYLE)
-    self.textEdit.setText("AutoFT Started...")
-    self.setCentralWidget(self.textEdit)
+    self.textLog = QTextBrowser()
+    self.textLog.setFont(QFont('Courier New', 14))
+    # self.textLog.setFont(QFont('Andale Mono', 16))
+    self.textLog.setOpenExternalLinks(True)
+    self.textLog.setStyleSheet(TEXT_STYLE)
+    self.textLog.setText("AutoFT Started...")
+    self.setCentralWidget(self.textLog)
 
     exitAction = QAction('Exit', self)
     exitAction.setShortcut('Ctrl+Q')
@@ -135,6 +135,10 @@ class FTCtl(QMainWindow):
 
     self.show()
 
+  def print(self, line):
+    self.textLog.append(line)
+    self.textLog.moveCursor(QTextCursor.End)
+
   def get_status(self):
     self.sock.sendto(self.status.heartbeat(), SRV_ADDR)
     try:
@@ -144,21 +148,23 @@ class FTCtl(QMainWindow):
       return
 
     self.status.decode(data)
-    self.statusBar().showMessage('Transmission: {}'.format('Paused' if self.status.is_pause() else 'On'))
+    if not self.status.call:
+      return
 
-    if self.status.call:
-      msg = ('Call: <a href="http://www.qrz.com/db/{0.call}">▤</a> '
-             '- <b>{0.call}</b>'
-             '- Xmit seq: {0.xmit} '
-             #'- Max Tries: {0.max_tries} '
-             '- Pause: {0._pause}').format(self.status)
+    req = {"call": self.status.call, "to": CONFIG.call}
+    call = DB.calls.find_one(req)
+    if call:
+      msg = ('Reply: <a href="http://www.qrz.com/db/{0[call]}">{0[call]}</a> '
+             '- <b>{0[Message]:18s}</b>'
+             '- Xmit seq: {1.xmit} '
+             '- Pause: {1._pause}').format(call, self.status)
     else:
-      msg = 'No call selected'
+      msg = ('Calling: <a href="http://www.qrz.com/db/{0.call}">{0.call}</a> '
+             '- Xmit seq: {0.xmit} - Pause: {0._pause}').format(self.status)
 
-    if not self.status.is_pause() and self._cache != msg:
+    if self._cache != msg:
       self._cache = msg
-      self.textEdit.append(msg.format(self.status))
-      self.textEdit.moveCursor(QTextCursor.End)
+      self.print(msg)
 
   def about(self):
     QMessageBox.about(self, "About AutoFT", __doc__)
@@ -173,8 +179,7 @@ class FTCtl(QMainWindow):
       event.ignore()
 
   def pause(self):
-    self.textEdit.append("Transmission paused...")
-    self.textEdit.moveCursor(QTextCursor.End)
+    self.print("Transmission paused... Click Run to transmit.")
     try:
       self.sock.sendto(self.status.pause(True), SRV_ADDR)
     except (socket.timeout, socket.error) as err:
@@ -182,8 +187,7 @@ class FTCtl(QMainWindow):
       return
 
   def run(self):
-    self.textEdit.append("Transmission active...")
-    self.textEdit.moveCursor(QTextCursor.End)
+    self.print("Transmission active...")
     try:
       self.sock.sendto(self.status.pause(False), SRV_ADDR)
     except (socket.timeout, socket.error) as err:
@@ -191,14 +195,13 @@ class FTCtl(QMainWindow):
       return
 
   def purge(self):
-    self.textEdit.append('Purge calls...')
+    self.print('Purge calls...')
     req = dict(logged=False, time={"$lt": delta(120)})
     idx = 0
     for idx, obj in enumerate(DB.black.find(req), start=1):
-      self.textEdit.append("Delete: {}, {}".format(obj['call'], datetime.fromtimestamp(obj['time'])))
+      self.print("Delete: {}, {}".format(obj['call'], datetime.fromtimestamp(obj['time'])))
       DB.black.delete_one({"_id": obj['_id']})
-    self.textEdit.append("{} records deleted".format(idx))
-    self.textEdit.moveCursor(QTextCursor.End)
+    self.print("{} records deleted".format(idx))
 
   def skip(self):
     sqs = sqstatus.SQStatus()
@@ -212,16 +215,13 @@ class FTCtl(QMainWindow):
       self.statusBar().showMessage('Connection {} the sequencer is not running'.format(err))
       return
 
-    self.textEdit.append('Skip call...'.format(sqs.call))
-    self.textEdit.moveCursor(QTextCursor.End)
+    self.print('Skip call...'.format(sqs.call))
 
   def clear(self):
-    self.textEdit.setText('')
-    self.textEdit.moveCursor(QTextCursor.End)
+    self.textLog.setText('')
 
 
 if __name__ == '__main__':
-  config = Config()
   app = QApplication(sys.argv)
   ex = FTCtl()
   sys.exit(app.exec_())

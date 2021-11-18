@@ -39,7 +39,7 @@ class Grid(GridBase):
     })
     for obj in req.sort([('SNR', -1)]):
       if self.match(obj['grid']):
-        coef = obj['distance'] * 10**(obj['SNR']/10)
+        coef = Grid.coefficient(obj['distance'], obj['SNR'])
         calls.append((coef, obj))
 
     calls.sort(key=operator.itemgetter(0), reverse=True)
@@ -60,7 +60,7 @@ class NotGrid(GridBase):
     })
     for obj in req.sort([('SNR', -1)]):
       if not self.match(obj['grid']):
-        coef = obj['distance'] * 10**(obj['SNR']/10)
+        coef = NotGrid.coefficient(obj['distance'], obj['SNR'])
         calls.append((coef, obj))
 
     calls.sort(key=operator.itemgetter(0), reverse=True)
