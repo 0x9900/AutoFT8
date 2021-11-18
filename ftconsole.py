@@ -50,6 +50,10 @@ TEXT_STYLE = """QTextBrowser {
 def delta(seconds):
   return int(datetime.utcnow().timestamp()) - seconds
 
+def purge_calls(seconds=1800):
+  req = dict(logged=False, time={"$lt": delta(seconds)})
+  response = DB.black.delete_many(req)
+  return response.deleted_count
 
 class FTCtl(QMainWindow):
 
@@ -66,6 +70,12 @@ class FTCtl(QMainWindow):
     self.timer.setInterval(2500)
     self.timer.timeout.connect(self.get_status)
     self.timer.start()
+
+    self.purge_timer = QTimer()
+    self.purge_timer.setInterval(60000)
+    self.purge_timer.timeout.connect(purge_calls)
+    self.purge_timer.start()
+
 
   def initUI(self):
     font = self.font()
@@ -195,13 +205,8 @@ class FTCtl(QMainWindow):
       return
 
   def purge(self):
-    self.print('Purge calls...')
-    req = dict(logged=False, time={"$lt": delta(120)})
-    idx = 0
-    for idx, obj in enumerate(DB.black.find(req), start=1):
-      self.print("Delete: {}, {}".format(obj['call'], datetime.fromtimestamp(obj['time'])))
-      DB.black.delete_one({"_id": obj['_id']})
-    self.print("{} records deleted".format(idx))
+    nb_del = purge_calls(120)
+    self.print(f"Purge calls cache: {nb_del} records deleted")
 
   def skip(self):
     sqs = sqstatus.SQStatus()
