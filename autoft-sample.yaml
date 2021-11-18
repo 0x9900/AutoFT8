@@ -5,14 +5,15 @@
 # `/etc/autoft.yaml`, `~/autoft.yaml` or `./autoft.yaml`
 #
 
+call: "N0CALL"                  # Your call sing
+location: "FN42ki"              # Maidenhead grid square location
+max_tries: 5                    # It's better to leave it at 5
+select_method: "any.Any"        # plugin name: <module.name>.<class>
+
 mongo_server: "localhost"
 bind_address: "127.0.0.1"
 wsjt_port: 2238
 monitor_port: 2240
-call: "W6BSD"
-location: "CM87vl"
-max_tries: 5                    # It's better to leave it at 5
-select_method: "any.Any"        # plugin name: <module.name>.<class>
 
 # Plugins configurations
 # Select call from the follwing grid squares.
