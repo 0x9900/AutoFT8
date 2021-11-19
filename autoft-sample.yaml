@@ -9,6 +9,7 @@ call: "N0CALL"                  # Your call sing
 location: "FN42ki"              # Maidenhead grid square location
 max_tries: 5                    # It's better to leave it at 5
 select_method: "any.Any"        # plugin name: <module.name>.<class>
+follow_frequency: True          # Transmit on the same frequency as the caller
 
 mongo_server: "localhost"
 bind_address: "127.0.0.1"

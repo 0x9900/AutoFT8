@@ -493,9 +493,9 @@ class WSReply(_WSPacket):
     return self._data.get('Modifiers', Modifiers.NoModifier)
 
   @Modifiers.setter
-  def Modifiers(self, val):
-    assert isinstance(val, Modifiers)
-    self._data['Modifiers'] = val
+  def Modifiers(self, modifier):
+    assert isinstance(modifier, Modifiers)
+    self._data['Modifiers'] = modifier.value
 
 
 class WSLogged(_WSPacket):

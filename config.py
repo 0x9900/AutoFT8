@@ -56,7 +56,11 @@ class Config:
   def get(self, key, default=None):
     if key not in self.config_data:
       return default
-    return type(key, (object, ), self.config_data[key])
+    value = self.config_data[key]
+    if isinstance(value, dict):
+      return type(key, (object, ), value)
+    else:
+      return value
 
   def __getattr__(self, attr):
     if attr not in self.config_data:
