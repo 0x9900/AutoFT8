@@ -40,6 +40,7 @@ class Transmit(threading.Thread):
     klass = getattr(module, class_name)
     self.call_selector = klass(config, status.db)
     self.call = config.call
+    self.follow_frequency = config.get('follow_frequency', True)
 
   def wait(self):
     while True:
@@ -96,19 +97,21 @@ class Transmit(threading.Thread):
         continue
 
       if self.is_incontact(self.status.call):
+        LOG.info('is_incontact')
         self.status.call = ''
 
       call = self.is_inprogress(self.status.call)
       if call:
         LOG.info('is_inprogress: %s', call['Message'])
-        self.transmit(Transmit.encode_xmit(call))
+        self.transmit(self.encode_xmit(call))
         self.status.call = call['call']
         continue
 
       call = self.run_pileup()
       if call:
         LOG.info('run_pileup: %s', call['Message'])
-        self.transmit(Transmit.encode_xmit(call))
+        packet = self.encode_xmit(call)
+        self.transmit(packet)
         self.status.call = call['call']
         continue
 
@@ -117,7 +120,7 @@ class Transmit(threading.Thread):
         call = self.call_selector.get()
         if call:
           LOG.info('%s: %s', self.call_selector, call['Message'])
-          self.transmit(Transmit.encode_xmit(call))
+          self.transmit(self.encode_xmit(call))
           self.status.call = call['call']
           self.status.xmit = self.status.max_tries
           self.status.db.black.update_one(
@@ -137,10 +140,9 @@ class Transmit(threading.Thread):
       "to": {"$not": exp},
       "timestamp": {"$gt": Transmit.timestamp() - 15},
     }
-    return self.status.db.calls.count_documents(request)
+    return bool(self.status.db.calls.count_documents(request))
 
   def is_inprogress(self, call):
-    # Search if someone is trying to contact us
     request =  {
       "call": call,
       "timestamp": {"$gt": Transmit.timestamp() - 60},
@@ -174,16 +176,7 @@ class Transmit(threading.Thread):
     _, call = calls.pop()
     return call
 
-  @staticmethod
-  def coefficient(distance, snr):
-    return distance * 10**(snr/10)
-
-  @staticmethod
-  def timestamp():
-    return int(datetime.utcnow().timestamp())
-
-  @staticmethod
-  def encode_xmit(call):
+  def encode_xmit(self, call):
     packet = wsjtx.WSReply()
     packet.call = call['call']
     packet.Time = call['Time']
@@ -192,4 +185,14 @@ class Transmit(threading.Thread):
     packet.DeltaFrequency = call['DeltaFrequency']
     packet.Mode = call['Mode']
     packet.Message = call['Message']
+    if self.follow_frequency:
+      packet.Modifiers = wsjtx.Modifiers.SHIFT
     return packet.raw()
+
+  @staticmethod
+  def coefficient(distance, snr):
+    return distance * 10**(snr/10)
+
+  @staticmethod
+  def timestamp():
+    return int(datetime.utcnow().timestamp())
