@@ -1,0 +1,14 @@
+[[source]]
+name = "pypi"
+url = "https://pypi.org/simple"
+verify_ssl = true
+
+[dev-packages]
+
+[packages]
+pymongo = "==3.12.1"
+pyyaml = "==6.0"
+PyQt5 = "==5.15.6"
+
+[requires]
+python_version = "3.8"
