@@ -72,7 +72,7 @@ class FTCtl(QMainWindow):
     self.timer.start()
 
     self.purge_timer = QTimer()
-    self.purge_timer.setInterval(60000)
+    self.purge_timer.setInterval(30000)
     self.purge_timer.timeout.connect(purge_calls)
     self.purge_timer.start()
 

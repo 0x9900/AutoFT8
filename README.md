@@ -48,7 +48,7 @@ The operator should set this field.
 **follow_frequency**: Change the transmit frequency to transmit on the same frequency as the caller
 
     Type: boolean,
-	Default: True
+    Default: True
 
 
 [^1]: Signal to Noise Ratio

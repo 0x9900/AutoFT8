@@ -71,10 +71,20 @@ class Transmit(threading.Thread):
       logging.error(self.status.ip_wsjt)
       raise
 
-  def transmit(self, packet):
+  def reply(self, call):
+    packet = wsjtx.WSReply()
+    packet.call = call['call']
+    packet.Time = call['Time']
+    packet.SNR = call['SNR']
+    packet.DeltaTime = call['DeltaTime']
+    packet.DeltaFrequency = call['DeltaFrequency']
+    packet.Mode = call['Mode']
+    packet.Message = call['Message']
+    if self.follow_frequency:
+      packet.Modifiers = wsjtx.Modifiers.SHIFT
+
     LOG.debug('Transmiting %s', packet)
-    self.sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-    self.sock.sendto(packet, self.status.ip_wsjt)
+    self.sock.sendto(packet.raw(), self.status.ip_wsjt)
 
   def run(self):
     # Wait for the very end of the sequence
@@ -103,15 +113,14 @@ class Transmit(threading.Thread):
       call = self.is_inprogress(self.status.call)
       if call:
         LOG.info('is_inprogress: %s', call['Message'])
-        self.transmit(self.encode_xmit(call))
+        self.reply(call)
         self.status.call = call['call']
         continue
 
       call = self.run_pileup()
       if call:
         LOG.info('run_pileup: %s', call['Message'])
-        packet = self.encode_xmit(call)
-        self.transmit(packet)
+        self.reply(call)
         self.status.call = call['call']
         continue
 
@@ -120,7 +129,7 @@ class Transmit(threading.Thread):
         call = self.call_selector.get()
         if call:
           LOG.info('%s: %s', self.call_selector, call['Message'])
-          self.transmit(self.encode_xmit(call))
+          self.reply(call)
           self.status.call = call['call']
           self.status.xmit = self.status.max_tries
           self.status.db.black.update_one(
@@ -128,8 +137,9 @@ class Transmit(threading.Thread):
             {"$set": {"time": Transmit.timestamp(), "logged": False}},
             upsert=True)
           continue
+        else:
+          LOG.critical('Stop Transmit')
 
-      self.stop_transmit(True)
     # Exit
     self.sock.close()
 
@@ -145,7 +155,7 @@ class Transmit(threading.Thread):
   def is_inprogress(self, call):
     request =  {
       "call": call,
-      "timestamp": {"$gt": Transmit.timestamp() - 60},
+      "timestamp": {"$gt": Transmit.timestamp() - 15},
     }
     if not call:
       return
@@ -175,19 +185,6 @@ class Transmit(threading.Thread):
     calls.sort(key=operator.itemgetter(0))
     _, call = calls.pop()
     return call
-
-  def encode_xmit(self, call):
-    packet = wsjtx.WSReply()
-    packet.call = call['call']
-    packet.Time = call['Time']
-    packet.SNR = call['SNR']
-    packet.DeltaTime = call['DeltaTime']
-    packet.DeltaFrequency = call['DeltaFrequency']
-    packet.Mode = call['Mode']
-    packet.Message = call['Message']
-    if self.follow_frequency:
-      packet.Modifiers = wsjtx.Modifiers.SHIFT
-    return packet.raw()
 
   @staticmethod
   def coefficient(distance, snr):
