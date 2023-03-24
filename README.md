@@ -1,4 +1,11 @@
 # Auto FT8
+
+This project is dead of FT8 Automation look at [FT8 Commander][1]
+
+
+---
+
+
 ## About
 AutoFT8 originated is an experimental project for ham radio operators who want to added autopilot to their FT8 experience. This program automatically controls WSJT-X to optimize contacts' chances during a contest or DX (make as many QSO as possible). After a receive sequence, the program calculates, using the distance, SNR[^1], and azimuth has the most chances of completing the QSO.
 
@@ -99,3 +106,5 @@ Build docker file for easy deployment
 
 # Authorship
 Fred Cirera
+
+[1]: https://0x9900.com/100-countries-in-2-weeks-with-10-watt/
