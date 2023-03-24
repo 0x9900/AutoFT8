@@ -1,6 +1,6 @@
 # Auto FT8
 
-This project is dead of FT8 Automation look at [FT8 Commander][1]
+## This project is dead of FT8 Automation look at [FT8 Commander][1]
 
 
 ---
